@@ -1,61 +1,26 @@
-# Carpetas de compilación
+# Build artifacts
 build/
-bin/
-out/
-obj/
-cmake-build-*/
-
-# Ejecutables
 *.exe
-*.out
-*.app
-*.bin
-
-# Archivos objeto y librerías
-*.o
 *.obj
-*.a
-*.lib
-*.so
+*.o
+*.out
 *.dll
+*.lib
+*.a
+*.so
 *.dylib
 
-# Archivos generados por CMake
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-compile_commands.json
-CTestTestfile.cmake
-Makefile
-
-# Resultados temporales de benchmarks
-resultados_benchmark.csv
-
-# Archivos de depuración
-*.pdb
-*.ilk
-*.dSYM/
-
-# Visual Studio
-.vs/
-*.sln
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-
-# Visual Studio Code
+# IDE / editor
 .vscode/
-
-# CLion / IntelliJ
 .idea/
 
-# Archivos temporales
-*.tmp
-*.temp
-*.log
-*.bak
-*~
-
-# Archivos del sistema operativo
+# OS files
 .DS_Store
 Thumbs.db
+
+# Temporary validation files
+/tmp_test.cpp
+tmp_test.cpp
+tmp_test.exe
+collision_validation.exe
+benchmark.exe
