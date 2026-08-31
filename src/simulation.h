@@ -49,6 +49,10 @@ struct SimulationConfig {
     // 1.0 significa un rebote completamente elástico.
     float wallRestitution = 1.0f;
 
+    // Repuesta de las colisiones entre partículas.
+    // 1.0 significa colisión totalmente elástica.
+    float collisionRestitution = 0.95f;
+
     // Semilla para generar siempre los mismos datos.
     unsigned int randomSeed = 12345;
 
@@ -70,6 +74,18 @@ void updateSequential(
 
 // Actualiza el movimiento utilizando OpenMP.
 void updateParallel(
+    std::vector<Particle>& particles,
+    const SimulationConfig& config
+);
+
+// Resuelve colisiones entre partículas de forma secuencial.
+void resolveCollisionsSequential(
+    std::vector<Particle>& particles,
+    const SimulationConfig& config
+);
+
+// Resuelve colisiones entre partículas utilizando OpenMP.
+void resolveCollisionsParallel(
     std::vector<Particle>& particles,
     const SimulationConfig& config
 );
