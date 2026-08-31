@@ -1,0 +1,61 @@
+# Carpetas de compilación
+build/
+bin/
+out/
+obj/
+cmake-build-*/
+
+# Ejecutables
+*.exe
+*.out
+*.app
+*.bin
+
+# Archivos objeto y librerías
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# Archivos generados por CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Makefile
+
+# Resultados temporales de benchmarks
+resultados_benchmark.csv
+
+# Archivos de depuración
+*.pdb
+*.ilk
+*.dSYM/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Visual Studio Code
+.vscode/
+
+# CLion / IntelliJ
+.idea/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+*.bak
+*~
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
