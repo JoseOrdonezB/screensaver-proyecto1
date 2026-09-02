@@ -36,20 +36,77 @@ Primero se implementará una versión secuencial y posteriormente una versión p
 
 ## Tecnologías
 
-* C++
+* C++ (estándar 17)
 * OpenMP
-* SDL
+* SDL2
 * CMake
+
+## Requisitos y compilación
+
+En macOS se necesita CMake, SDL2 y la librería de OpenMP (libomp):
+
+```bash
+brew install cmake sdl2 libomp
+```
+
+OpenMP no incluye Apple clang por defecto; el `CMakeLists.txt` detecta
+automáticamente la instalación de Homebrew en `/opt/homebrew/opt/libomp`.
+
+Para compilar:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+Ejecutables generados en `build/`:
+
+* `screensaver` — el screensaver con ventana.
+* `screensaver_benchmark` — mide tiempos secuencial/paralelo y calcula
+  speedup y eficiencia (genera `resultados_benchmark.csv`).
+* `collision_validation` — prueba de validación de colisiones.
+
+## Uso del screensaver
+
+```bash
+./build/screensaver --particles N  [opciones]
+```
+
+### Argumentos
+
+| Flag | Descripción | Default |
+| --- | --- | --- |
+| `--particles N` | Cantidad de partículas a renderizar (obligatorio, > 0) | — |
+| `--width W` | Ancho del canvas en píxeles (mínimo 640) | 800 |
+| `--height H` | Alto del canvas en píxeles (mínimo 480) | 600 |
+| `--seed S` | Semilla de los datos pseudoaleatorios | 12345 |
+| `--max-fps F` | Límite de fotogramas por segundo | 60 |
+| `-h`, `--help` | Muestra la ayuda | — |
+
+### Ejemplos
+
+```bash
+./build/screensaver --particles 500
+./build/screensaver --particles 2000 --width 1280 --height 720
+./build/screensaver --particles 100 --seed 7 --max-fps 120
+```
+
+### Controles
+
+* `ESC` o cerrar la ventana: termina el programa.
+* El título de la ventana muestra los FPS actuales.
 
 ## Estado del proyecto
 
-Proyecto en etapa inicial de desarrollo.
+Versión secuencial funcionando: movimiento, rebotes contra los bordes,
+colisiones entre partículas y renderizado con framebuffer en SDL2.
+Pendiente: integración de la versión paralela con OpenMP y sus benchmarks.
 
 ## Estructura principal
 
-* `include/`: archivos de encabezado.
-* `src/`: implementación del programa.
-* `tests/`: pruebas de los módulos.
-* `benchmarks/`: pruebas de rendimiento.
-* `docs/`: documentación y resultados.
-* `scripts/`: scripts auxiliares.
+* `src/particles.cpp` — inicialización de partículas y configuración.
+* `src/movement.cpp` — movimiento, física y rebotes (secuencial/paralelo).
+* `src/collisions.cpp` — detección y resolución de colisiones (secuencial/paralelo).
+* `src/renderer.cpp` — ventana SDL y framebuffer de píxeles.
+* `src/main.cpp` — argumentos de línea de comandos y game loop.
+* `src/benchmark.cpp` — mediciones de speedup y eficiencia.
