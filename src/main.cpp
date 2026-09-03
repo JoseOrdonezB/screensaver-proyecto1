@@ -14,6 +14,7 @@
 
 namespace {
 
+// Valores por defecto y límites de los argumentos de línea de comandos.
 constexpr int MINIMUM_WIDTH = 640;
 constexpr int MINIMUM_HEIGHT = 480;
 
@@ -25,6 +26,7 @@ constexpr unsigned int DEFAULT_SEED = 12345;
 constexpr int MAXIMUM_CANVAS_SIZE = 8192;
 constexpr int MAXIMUM_FPS = 1000;
 
+// Agrupa los argumentos de línea de comandos una vez parseados.
 struct ProgramArguments {
     std::size_t particleCount = 0;
     int width = DEFAULT_WIDTH;
@@ -34,11 +36,13 @@ struct ProgramArguments {
     bool helpRequested = false;
 };
 
+// Resultado de convertir un texto a número, marcando si fue válido.
 struct ParsedNumber {
     bool valid = false;
     long long value = 0;
 };
 
+// Convierte un texto en un entero, validando que todo el contenido sea numérico.
 ParsedNumber parseInteger(const char* text) {
     ParsedNumber result;
 
@@ -60,6 +64,7 @@ ParsedNumber parseInteger(const char* text) {
     return result;
 }
 
+// Muestra la ayuda del programa por pantalla.
 void printUsage(const char* programName) {
     std::cout
         << "Uso: " << programName << " --particles N [opciones]\n\n"
@@ -77,6 +82,7 @@ void printUsage(const char* programName) {
         << "  -h, --help          Muestra esta ayuda\n";
 }
 
+// Recorre los argumentos de línea de comandos y los guarda en ProgramArguments.
 bool parseArguments(
     const int argc,
     char* argv[],
@@ -180,6 +186,7 @@ bool parseArguments(
     return true;
 }
 
+// Verifica que los valores parseados estén dentro de los límites permitidos.
 bool validateArguments(const ProgramArguments& arguments) {
     const auto fail = [](const std::string& message) {
         std::cerr << "Error: " << message << "\n\n";
@@ -218,6 +225,7 @@ bool validateArguments(const ProgramArguments& arguments) {
     return true;
 }
 
+// Cuenta los fotogramas y actualiza el título con los FPS cada medio segundo.
 struct FpsCounter {
     int framesRendered = 0;
     int currentFps = 0;
@@ -250,6 +258,7 @@ struct FpsCounter {
     }
 };
 
+// Procesa los eventos de la ventana y devuelve false al cerrarla o pulsar ESC.
 bool handleEvents() {
     SDL_Event event;
 
@@ -269,6 +278,7 @@ bool handleEvents() {
     return true;
 }
 
+// Calcula el tiempo transcurrido desde el frame anterior, acotado a un rango seguro.
 float computeDeltaTime(std::uint64_t& previousFrameTime) {
     const std::uint64_t currentTicks = SDL_GetTicks64();
     const float deltaSeconds =
@@ -279,6 +289,7 @@ float computeDeltaTime(std::uint64_t& previousFrameTime) {
     return std::clamp(deltaSeconds, 0.0001f, 0.05f);
 }
 
+// Avanza la simulación un paso usando el tiempo delta del frame.
 void updateSimulation(
     std::vector<Particle>& particles,
     SimulationConfig& config,
@@ -290,6 +301,7 @@ void updateSimulation(
     resolveCollisionsSequential(particles, config);
 }
 
+// Limpia, dibuja todas las partículas y muestra el frame en pantalla.
 void renderFrame(
     Renderer& renderer,
     const std::vector<Particle>& particles
@@ -299,6 +311,7 @@ void renderFrame(
     presentRenderer(renderer);
 }
 
+// Espera lo necesario para no superar el límite de fotogramas por segundo.
 void throttleToMaxFps(
     const std::uint64_t frameStartTime,
     const int maxFps
@@ -313,6 +326,7 @@ void throttleToMaxFps(
     }
 }
 
+// Bucle principal: eventos, simulación, renderizado y control de FPS.
 void runGameLoop(
     Renderer& renderer,
     std::vector<Particle>& particles,
@@ -358,6 +372,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Inicializa SDL y crea la ventana con su renderer.
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cerr
             << "Error al inicializar SDL: "
@@ -373,6 +388,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Carga la configuración y crea las partículas de la simulación.
     SimulationConfig config;
     config.width = arguments.width;
     config.height = arguments.height;
@@ -403,6 +419,7 @@ int main(int argc, char* argv[]) {
         << ", max fps " << arguments.maxFps << ".\n"
         << "Cierra la ventana o presiona ESC para salir.\n";
 
+    // Ejecuta el bucle y después libera los recursos creados por SDL.
     runGameLoop(renderer, particles, config, arguments.maxFps);
 
     shutdownRenderer(renderer);

@@ -5,6 +5,7 @@
 #include <iostream>
 
 namespace {
+// Empaqueta RGBA en un único entero de 32 bits.
 std::uint32_t packColor(
     const std::uint8_t red,
     const std::uint8_t green,
@@ -18,6 +19,7 @@ std::uint32_t packColor(
         static_cast<std::uint32_t>(blue);
 }
 
+// Rellena el círculo de una partícula dentro del framebuffer de píxeles.
 void fillParticleCircle(
     Renderer& renderer,
     const Particle& particle
@@ -67,6 +69,7 @@ void fillParticleCircle(
 
 }
 
+// Crea la ventana SDL, el renderer y la textura que muestra el framebuffer.
 bool initRenderer(Renderer& renderer, const int width, const int height) {
     if (width <= 0 || height <= 0) {
         std::cerr
@@ -135,12 +138,14 @@ bool initRenderer(Renderer& renderer, const int width, const int height) {
     return true;
 }
 
+// Pinta todo el framebuffer con el color de fondo.
 void clearRenderer(Renderer& renderer) {
     for (std::uint32_t& pixel : renderer.pixels) {
         pixel = renderer.backgroundColor;
     }
 }
 
+// Dibuja todas las partículas en el framebuffer de píxeles.
 void drawRendererSequential(
     Renderer& renderer,
     const std::vector<Particle>& particles
@@ -150,6 +155,7 @@ void drawRendererSequential(
     }
 }
 
+// Envía el contenido del framebuffer a la pantalla con SDL.
 void presentRenderer(Renderer& renderer) {
     const int pitch = renderer.width * static_cast<int>(sizeof(std::uint32_t));
 
@@ -164,6 +170,7 @@ void presentRenderer(Renderer& renderer) {
     SDL_RenderPresent(renderer.renderer);
 }
 
+// Libera la textura, el renderer y la ventana creados por SDL.
 void shutdownRenderer(Renderer& renderer) {
     if (renderer.texture != nullptr) {
         SDL_DestroyTexture(renderer.texture);
