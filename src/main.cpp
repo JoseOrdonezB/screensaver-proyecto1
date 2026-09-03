@@ -218,81 +218,123 @@ bool validateArguments(const ProgramArguments& arguments) {
     return true;
 }
 
+struct FpsCounter {
+    int framesRendered = 0;
+    int currentFps = 0;
+    std::uint64_t windowStart = 0;
+
+    void update(SDL_Window* window, const std::uint64_t nowTicks) {
+        ++framesRendered;
+
+        if (nowTicks - windowStart < 500) {
+            return;
+        }
+
+        currentFps = static_cast<int>(
+            framesRendered * 1000.0 /
+            static_cast<double>(nowTicks - windowStart)
+        );
+
+        framesRendered = 0;
+        windowStart = nowTicks;
+
+        char title[128];
+        std::snprintf(
+            title,
+            sizeof(title),
+            "Screensaver Paralelo - %d FPS",
+            currentFps
+        );
+
+        SDL_SetWindowTitle(window, title);
+    }
+};
+
+bool handleEvents() {
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            return false;
+        }
+
+        if (
+            event.type == SDL_KEYDOWN &&
+            event.key.keysym.sym == SDLK_ESCAPE
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+float computeDeltaTime(std::uint64_t& previousFrameTime) {
+    const std::uint64_t currentTicks = SDL_GetTicks64();
+    const float deltaSeconds =
+        static_cast<float>(currentTicks - previousFrameTime) / 1000.0f;
+
+    previousFrameTime = currentTicks;
+
+    return std::clamp(deltaSeconds, 0.0001f, 0.05f);
+}
+
+void updateSimulation(
+    std::vector<Particle>& particles,
+    SimulationConfig& config,
+    const float deltaSeconds
+) {
+    config.deltaTime = deltaSeconds;
+
+    updateSequential(particles, config);
+    resolveCollisionsSequential(particles, config);
+}
+
+void renderFrame(
+    Renderer& renderer,
+    const std::vector<Particle>& particles
+) {
+    clearRenderer(renderer);
+    drawRendererSequential(renderer, particles);
+    presentRenderer(renderer);
+}
+
+void throttleToMaxFps(
+    const std::uint64_t frameStartTime,
+    const int maxFps
+) {
+    const std::uint64_t frameElapsed =
+        SDL_GetTicks64() - frameStartTime;
+    const std::uint32_t targetFrameTimeMs =
+        static_cast<std::uint32_t>(1000 / maxFps);
+
+    if (frameElapsed < targetFrameTimeMs) {
+        SDL_Delay(targetFrameTimeMs - frameElapsed);
+    }
+}
+
 void runGameLoop(
     Renderer& renderer,
     std::vector<Particle>& particles,
     SimulationConfig& config,
     const int maxFps
 ) {
-    bool running = true;
+    FpsCounter fps;
     std::uint64_t previousFrameTime = SDL_GetTicks64();
+    fps.windowStart = previousFrameTime;
 
-    int framesRendered = 0;
-    int currentFps = 0;
-    std::uint64_t fpsWindowStart = SDL_GetTicks64();
+    bool running = true;
 
     while (running) {
-        SDL_Event event;
+        running = handleEvents();
 
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                running = false;
-            } else if (
-                event.type == SDL_KEYDOWN &&
-                event.key.keysym.sym == SDLK_ESCAPE
-            ) {
-                running = false;
-            }
-        }
+        const float deltaSeconds = computeDeltaTime(previousFrameTime);
+        updateSimulation(particles, config, deltaSeconds);
+        renderFrame(renderer, particles);
 
-        const std::uint64_t currentTicks = SDL_GetTicks64();
-        float deltaSeconds =
-            static_cast<float>(currentTicks - previousFrameTime) /
-            1000.0f;
-
-        deltaSeconds = std::clamp(deltaSeconds, 0.0001f, 0.05f);
-        previousFrameTime = currentTicks;
-
-        config.deltaTime = deltaSeconds;
-
-        updateSequential(particles, config);
-        resolveCollisionsSequential(particles, config);
-
-        clearRenderer(renderer);
-        drawRendererSequential(renderer, particles);
-        presentRenderer(renderer);
-
-        ++framesRendered;
-
-        if (currentTicks - fpsWindowStart >= 500) {
-            currentFps =
-                static_cast<int>(
-                    framesRendered * 1000.0 /
-                    static_cast<double>(currentTicks - fpsWindowStart)
-                );
-
-            framesRendered = 0;
-            fpsWindowStart = currentTicks;
-
-            char title[128];
-            std::snprintf(
-                title,
-                sizeof(title),
-                "Screensaver Paralelo - %d FPS",
-                currentFps
-            );
-
-            SDL_SetWindowTitle(renderer.window, title);
-        }
-
-        const std::uint64_t frameElapsed =
-            SDL_GetTicks64() - currentTicks;
-        const std::uint32_t targetFrameTimeMs =
-            static_cast<std::uint32_t>(1000 / maxFps);
-
-        if (frameElapsed < targetFrameTimeMs) {
-            SDL_Delay(targetFrameTimeMs - frameElapsed);
-        }
+        const std::uint64_t nowTicks = SDL_GetTicks64();
+        fps.update(renderer.window, nowTicks);
+        throttleToMaxFps(nowTicks, maxFps);
     }
 }
 
