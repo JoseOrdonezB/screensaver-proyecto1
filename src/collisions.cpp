@@ -2,18 +2,22 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
+
+#include <omp.h>
 
 namespace {
 
-// Normaliza un vector para evitar divisiones por cero.
+// Normaliza un vector evitando divisiones por cero.
 void normalizePair(
     const float dx,
     const float dy,
     float& normalX,
     float& normalY
 ) {
-    const float distanceSquared = dx * dx + dy * dy;
+    const float distanceSquared =
+        dx * dx + dy * dy;
 
     if (distanceSquared <= 1.0e-12f) {
         normalX = 1.0f;
@@ -21,50 +25,137 @@ void normalizePair(
         return;
     }
 
-    const float distance = std::sqrt(distanceSquared);
+    const float distance =
+        std::sqrt(distanceSquared);
+
     normalX = dx / distance;
     normalY = dy / distance;
 }
 
-// Resuelve la intersección de una pareja de partículas.
+
+// Verifica si dos particulas se intersectan.
+bool particlesOverlap(
+    const Particle& first,
+    const Particle& second
+) {
+    const float dx =
+        second.x - first.x;
+
+    const float dy =
+        second.y - first.y;
+
+    const float distanceSquared =
+        dx * dx + dy * dy;
+
+    const float minimumDistance =
+        first.radius + second.radius;
+
+    return distanceSquared <
+        minimumDistance * minimumDistance;
+}
+
+
+// Resuelve la colision entre dos particulas.
 void resolveParticlePair(
     Particle& first,
     Particle& second,
     const SimulationConfig& config
 ) {
-    const float dx = second.x - first.x;
-    const float dy = second.y - first.y;
-    const float distanceSquared = dx * dx + dy * dy;
-    const float minimumDistance = first.radius + second.radius;
-    const float minimumDistanceSquared = minimumDistance * minimumDistance;
+    const float dx =
+        second.x - first.x;
+
+    const float dy =
+        second.y - first.y;
+
+    const float distanceSquared =
+        dx * dx + dy * dy;
+
+    const float minimumDistance =
+        first.radius + second.radius;
+
+    const float minimumDistanceSquared =
+        minimumDistance * minimumDistance;
 
     if (distanceSquared >= minimumDistanceSquared) {
         return;
     }
 
-    const float distance = std::sqrt(std::max(distanceSquared, 1.0e-12f));
+    const float distance =
+        std::sqrt(
+            std::max(
+                distanceSquared,
+                1.0e-12f
+            )
+        );
+
     float normalX = 0.0f;
     float normalY = 0.0f;
-    normalizePair(dx, dy, normalX, normalY);
 
-    const float overlap = minimumDistance - distance;
-    const float massFirst = std::max(first.mass, 1.0e-6f);
-    const float massSecond = std::max(second.mass, 1.0e-6f);
-    const float inverseMassFirst = 1.0f / massFirst;
-    const float inverseMassSecond = 1.0f / massSecond;
-    const float totalInverseMass = inverseMassFirst + inverseMassSecond;
+    normalizePair(
+        dx,
+        dy,
+        normalX,
+        normalY
+    );
+
+    const float overlap =
+        minimumDistance - distance;
+
+    const float massFirst =
+        std::max(
+            first.mass,
+            1.0e-6f
+        );
+
+    const float massSecond =
+        std::max(
+            second.mass,
+            1.0e-6f
+        );
+
+    const float inverseMassFirst =
+        1.0f / massFirst;
+
+    const float inverseMassSecond =
+        1.0f / massSecond;
+
+    const float totalInverseMass =
+        inverseMassFirst +
+        inverseMassSecond;
 
     if (totalInverseMass > 0.0f) {
-        const float correction = overlap / totalInverseMass;
+        const float correction =
+            overlap / totalInverseMass;
 
-        first.x -= normalX * correction * inverseMassFirst;
-        first.y -= normalY * correction * inverseMassFirst;
-        second.x += normalX * correction * inverseMassSecond;
-        second.y += normalY * correction * inverseMassSecond;
+        first.x -=
+            normalX *
+            correction *
+            inverseMassFirst;
+
+        first.y -=
+            normalY *
+            correction *
+            inverseMassFirst;
+
+        second.x +=
+            normalX *
+            correction *
+            inverseMassSecond;
+
+        second.y +=
+            normalY *
+            correction *
+            inverseMassSecond;
     }
 
-    const float relativeVelocityX = second.velocityX - first.velocityX;
-    const float relativeVelocityY = second.velocityY - first.velocityY;
+    const float relativeVelocityX =
+        second.velocityX -
+        first.velocityX;
+
+    const float relativeVelocityY =
+        second.velocityY -
+        first.velocityY;
+
     const float velocityAlongNormal =
         relativeVelocityX * normalX +
         relativeVelocityY * normalY;
@@ -73,34 +164,59 @@ void resolveParticlePair(
         return;
     }
 
-    const float restitution = std::clamp(
-        config.collisionRestitution,
-        0.0f,
-        1.0f
-    );
+    const float restitution =
+        std::clamp(
+            config.collisionRestitution,
+            0.0f,
+            1.0f
+        );
+
     const float impulseMagnitude =
-        (-(1.0f + restitution) * velocityAlongNormal) /
+        (
+            -(1.0f + restitution) *
+            velocityAlongNormal
+        ) /
         totalInverseMass;
 
-    const float impulseX = impulseMagnitude * normalX;
-    const float impulseY = impulseMagnitude * normalY;
+    const float impulseX =
+        impulseMagnitude * normalX;
 
-    first.velocityX -= impulseX * inverseMassFirst;
-    first.velocityY -= impulseY * inverseMassFirst;
-    second.velocityX += impulseX * inverseMassSecond;
-    second.velocityY += impulseY * inverseMassSecond;
+    const float impulseY =
+        impulseMagnitude * normalY;
+
+    first.velocityX -=
+        impulseX * inverseMassFirst;
+
+    first.velocityY -=
+        impulseY * inverseMassFirst;
+
+    second.velocityX +=
+        impulseX * inverseMassSecond;
+
+    second.velocityY +=
+        impulseY * inverseMassSecond;
 }
 
-}  // namespace
+} // namespace
+
 
 void resolveCollisionsSequential(
     std::vector<Particle>& particles,
     const SimulationConfig& config
 ) {
-    const std::size_t particleCount = particles.size();
+    const std::size_t particleCount =
+        particles.size();
 
-    for (std::size_t i = 0; i < particleCount; ++i) {
-        for (std::size_t j = i + 1; j < particleCount; ++j) {
+    for (
+        std::size_t i = 0;
+        i < particleCount;
+        ++i
+    ) {
+        for (
+            std::size_t j = i + 1;
+            j < particleCount;
+            ++j
+        ) {
             resolveParticlePair(
                 particles[i],
                 particles[j],
@@ -110,27 +226,96 @@ void resolveCollisionsSequential(
     }
 }
 
+
 void resolveCollisionsParallel(
     std::vector<Particle>& particles,
     const SimulationConfig& config
 ) {
-    const std::size_t particleCount = particles.size();
+    const std::size_t particleCount =
+        particles.size();
 
     if (particleCount < 2) {
         return;
     }
 
-#pragma omp parallel for schedule(static) num_threads(config.threadCount)
-    for (long long i = 0; i < static_cast<long long>(particleCount); ++i) {
-        for (long long j = i + 1; j < static_cast<long long>(particleCount); ++j) {
-#pragma omp critical
-            {
-                resolveParticlePair(
-                    particles[static_cast<std::size_t>(i)],
-                    particles[static_cast<std::size_t>(j)],
-                    config
+    using CollisionPair =
+        std::pair<std::size_t, std::size_t>;
+
+    const int threadCount =
+        std::max(1, config.threadCount);
+
+    std::vector<std::vector<CollisionPair>>
+        localCollisions(
+            static_cast<std::size_t>(threadCount)
+        );
+
+    // Cada hilo busca posibles colisiones
+    // sin modificar las particulas.
+#pragma omp parallel num_threads(threadCount)
+    {
+        const int threadId =
+            omp_get_thread_num();
+
+        std::vector<CollisionPair>&
+            collisions =
+                localCollisions[
+                    static_cast<std::size_t>(
+                        threadId
+                    )
+                ];
+
+#pragma omp for schedule(static)
+        for (
+            long long i = 0;
+            i <
+                static_cast<long long>(
+                    particleCount
                 );
+            ++i
+        ) {
+            for (
+                long long j = i + 1;
+                j <
+                    static_cast<long long>(
+                        particleCount
+                    );
+                ++j
+            ) {
+                const std::size_t firstIndex =
+                    static_cast<std::size_t>(i);
+
+                const std::size_t secondIndex =
+                    static_cast<std::size_t>(j);
+
+                if (
+                    particlesOverlap(
+                        particles[firstIndex],
+                        particles[secondIndex]
+                    )
+                ) {
+                    collisions.emplace_back(
+                        firstIndex,
+                        secondIndex
+                    );
+                }
             }
+        }
+    }
+
+    // Se resuelven solamente las parejas encontradas.
+    for (
+        const std::vector<CollisionPair>& collisions :
+        localCollisions
+    ) {
+        for (
+            const CollisionPair& collision :
+            collisions
+        ) {
+            resolveParticlePair(
+                particles[collision.first],
+                particles[collision.second],
+                config
+            );
         }
     }
 }
