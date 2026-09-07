@@ -1,112 +1,663 @@
-# Screensaver Paralelo
+# Screensaver Paralelo con OpenMP
 
-Proyecto 1 del curso de Computación Paralela y Distribuida.
+Proyecto #1 de **Computación Paralela y Distribuida**.
 
-## Descripción
+El proyecto implementa un screensaver de partículas en **C++17 + SDL2**, partiendo de una versión secuencial y desarrollando posteriormente una versión paralela utilizando **OpenMP**.
 
-El proyecto consiste en desarrollar un screensaver de partículas en movimiento utilizando C++.
+Las partículas se generan pseudoaleatoriamente, se desplazan dentro del canvas, rebotan contra las paredes y reaccionan a colisiones entre sí.
 
-Primero se implementará una versión secuencial y posteriormente una versión paralela utilizando OpenMP. El programa incluirá movimiento, rebotes contra los bordes, colisiones entre partículas y renderizado mediante SDL.
+El proyecto incluye dos ejecutables del screensaver:
 
-## Integrantes y responsabilidades
+- `screensaver`: versión secuencial.
+- `screensaver_parallel`: versión paralela con OpenMP.
 
-### Persona 1 —  Osman de León - Simulación y movimiento
+También incluye herramientas para validar las colisiones y medir el rendimiento de ambas implementaciones.
 
-* Inicialización de partículas.
-* Movimiento, velocidad y física.
-* Rebotes contra los bordes.
-* Versión secuencial y paralela con OpenMP.
-* Pruebas y benchmarks.
+---
 
-### Persona 2 — Colisiones e interacciones
+## Características
 
-* Detección de colisiones.
-* Resolución de colisiones.
-* Paralelización con OpenMP.
-* Manejo de sincronización y race conditions.
-* Pruebas y benchmarks.
+- Simulación de N partículas.
+- Colores generados pseudoaleatoriamente.
+- Movimiento continuo.
+- Rebotes contra los límites del canvas.
+- Colisiones entre partículas.
+- Corrección de solapamiento.
+- Conservación aproximada del comportamiento físico mediante impulsos.
+- Coeficientes de restitución para paredes y partículas.
+- Renderizado con SDL2.
+- Versión secuencial.
+- Versión paralela con OpenMP.
+- Número de hilos configurable.
+- Validación automática de colisiones.
+- Stress tests de la implementación paralela.
+- Benchmark de movimiento.
+- Benchmark de simulación completa.
+- Cálculo de speedup y eficiencia.
+- Exportación de mediciones a CSV.
 
-### Persona 3 — Renderizado e infraestructura
+---
 
-* Ventana y renderizado con SDL.
-* Manejo de eventos.
-* Argumentos de línea de comandos.
-* Integración de los módulos.
-* Estabilidad final del programa.
+## Tecnologías utilizadas
 
-## Tecnologías
+| Tecnología | Uso |
+|---|---|
+| C++17 | Implementación principal |
+| OpenMP | Paralelización |
+| SDL2 | Ventana y renderizado |
+| CMake | Compilación |
+| CSV | Almacenamiento de resultados |
+| Git | Control de versiones |
 
-* C++ (estándar 17)
-* OpenMP
-* SDL2
-* CMake
+---
 
-## Requisitos y compilación
+## Estructura del proyecto
 
-En macOS se necesita CMake, SDL2 y la librería de OpenMP (libomp):
-
-```bash
-brew install cmake sdl2 libomp
+```text
+screensaver-proyecto1/
+│
+├── CMakeLists.txt
+├── README.md
+│
+└── src/
+    ├── main.cpp
+    ├── main_parallel.cpp
+    │
+    ├── particles.cpp
+    ├── movement.cpp
+    ├── collisions.cpp
+    ├── renderer.cpp
+    │
+    ├── simulation.h
+    ├── collisions.h
+    ├── renderer.h
+    │
+    ├── benchmark.cpp
+    └── collision_validation.cpp
 ```
 
-OpenMP no incluye Apple clang por defecto; el `CMakeLists.txt` detecta
-automáticamente la instalación de Homebrew en `/opt/homebrew/opt/libomp`.
+### Archivos principales
 
-Para compilar:
+`main.cpp` contiene el programa secuencial y administra la ventana, argumentos, simulación y game loop.
+
+`main_parallel.cpp` contiene la versión paralela del screensaver y permite seleccionar la cantidad de hilos OpenMP.
+
+`particles.cpp` se encarga de la creación e inicialización de las partículas.
+
+`movement.cpp` contiene las implementaciones secuencial y paralela del movimiento.
+
+`collisions.cpp` implementa la detección y resolución de colisiones entre partículas.
+
+`renderer.cpp` contiene las operaciones relacionadas con SDL2 y el dibujo de las partículas.
+
+`benchmark.cpp` compara el rendimiento de las versiones secuencial y paralela.
+
+`collision_validation.cpp` contiene pruebas para verificar el funcionamiento de las colisiones.
+
+---
+
+# Compilación
+
+## Dependencias
+
+Se necesita:
+
+- Compilador compatible con C++17.
+- CMake 3.16 o superior.
+- SDL2.
+- OpenMP.
+
+### Ubuntu / Debian / WSL
+
+```bash
+sudo apt update
+sudo apt install build-essential cmake libsdl2-dev
+```
+
+GCC normalmente incluye soporte para OpenMP.
+
+Se puede comprobar con:
+
+```bash
+g++ --version
+cmake --version
+sdl2-config --version
+```
+
+---
+
+## Compilar el proyecto
+
+Desde la raíz:
 
 ```bash
 cmake -S . -B build
-cmake --build build
+cmake --build build -j
 ```
 
-Ejecutables generados en `build/`:
+Al finalizar se generan los siguientes ejecutables:
 
-* `screensaver` — el screensaver con ventana.
-* `screensaver_benchmark` — mide tiempos secuencial/paralelo y calcula
-  speedup y eficiencia (genera `resultados_benchmark.csv`).
-* `collision_validation` — prueba de validación de colisiones.
+```text
+build/screensaver
+build/screensaver_parallel
+build/screensaver_benchmark
+build/collision_validation
+```
 
-## Uso del screensaver
+---
+
+# Screensaver secuencial
+
+La versión secuencial puede ejecutarse con:
 
 ```bash
-./build/screensaver --particles N  [opciones]
+./build/screensaver --particles 500
+```
+
+Ejemplo con parámetros adicionales:
+
+```bash
+./build/screensaver \
+    --particles 1000 \
+    --width 1280 \
+    --height 720 \
+    --seed 12345 \
+    --max-fps 60
 ```
 
 ### Argumentos
 
-| Flag | Descripción | Default |
-| --- | --- | --- |
-| `--particles N` | Cantidad de partículas a renderizar (obligatorio, > 0) | — |
-| `--width W` | Ancho del canvas en píxeles (mínimo 640) | 800 |
-| `--height H` | Alto del canvas en píxeles (mínimo 480) | 600 |
-| `--seed S` | Semilla de los datos pseudoaleatorios | 12345 |
-| `--max-fps F` | Límite de fotogramas por segundo | 60 |
-| `-h`, `--help` | Muestra la ayuda | — |
+| Argumento | Descripción |
+|---|---|
+| `--particles N` | Número de partículas. Obligatorio |
+| `--width W` | Ancho del canvas |
+| `--height H` | Alto del canvas |
+| `--seed S` | Semilla pseudoaleatoria |
+| `--max-fps F` | Límite de FPS |
+| `--help` | Muestra la ayuda |
 
-### Ejemplos
+El tamaño mínimo permitido para el canvas es **640x480**.
+
+---
+
+# Screensaver paralelo
+
+La versión paralela utiliza OpenMP para ejecutar las partes paralelizables de la simulación.
+
+Ejemplo:
+
+```bash
+./build/screensaver_parallel --particles 500 --threads 4
+```
+
+También puede probarse con diferentes cantidades de hilos:
+
+```bash
+./build/screensaver_parallel --particles 500 --threads 1
+./build/screensaver_parallel --particles 500 --threads 2
+./build/screensaver_parallel --particles 500 --threads 4
+./build/screensaver_parallel --particles 500 --threads 8
+```
+
+Si no se especifica `--threads`, se utiliza la cantidad máxima de hilos reportada por OpenMP.
+
+### Argumentos
+
+| Argumento | Descripción |
+|---|---|
+| `--particles N` | Número de partículas. Obligatorio |
+| `--threads T` | Número de hilos OpenMP |
+| `--width W` | Ancho del canvas |
+| `--height H` | Alto del canvas |
+| `--seed S` | Semilla pseudoaleatoria |
+| `--max-fps F` | Límite de FPS |
+| `--help` | Muestra la ayuda |
+
+Ejemplo:
+
+```bash
+./build/screensaver_parallel \
+    --particles 1000 \
+    --threads 4 \
+    --width 1280 \
+    --height 720
+```
+
+---
+
+# Paralelización
+
+La simulación contiene dos partes principales que se analizaron para paralelización:
+
+1. Movimiento de partículas.
+2. Detección de colisiones.
+
+## Movimiento
+
+El movimiento de las partículas es apropiado para paralelización porque cada iteración puede actualizar una partícula diferente.
+
+La versión paralela utiliza OpenMP con distribución estática del trabajo.
+
+Conceptualmente:
+
+```cpp
+#pragma omp parallel for schedule(static)
+for (...) {
+    // actualizar particula
+}
+```
+
+Esto permite distribuir las partículas entre varios hilos.
+
+---
+
+## Colisiones
+
+Las colisiones requieren mayor cuidado porque una colisión puede modificar simultáneamente dos partículas.
+
+Una primera implementación utilizaba una sección crítica para cada pareja:
+
+```cpp
+#pragma omp critical
+{
+    resolveParticlePair(...);
+}
+```
+
+Aunque esta estrategia protegía el acceso a memoria compartida, generaba una gran cantidad de sincronización y reducía considerablemente el rendimiento.
+
+La implementación optimizada separa el proceso en dos etapas.
+
+### 1. Detección paralela
+
+Los hilos buscan parejas de partículas que potencialmente están colisionando.
+
+Durante esta fase las partículas son únicamente leídas.
+
+Cada hilo mantiene su propia lista local de parejas:
+
+```text
+Thread 0 -> candidatos locales
+Thread 1 -> candidatos locales
+Thread 2 -> candidatos locales
+Thread 3 -> candidatos locales
+```
+
+Esto evita que varios hilos modifiquen simultáneamente la misma estructura.
+
+### 2. Resolución
+
+Después de finalizar la detección paralela existe una barrera implícita de OpenMP.
+
+Las parejas encontradas son posteriormente procesadas para corregir:
+
+- solapamiento;
+- posición;
+- velocidad;
+- impulso de colisión.
+
+Esta estrategia reduce la contención sobre memoria compartida y evita utilizar una sección crítica para cada una de las posibles parejas.
+
+---
+
+# Complejidad de colisiones
+
+Para `N` partículas, una búsqueda directa de todas las parejas necesita evaluar aproximadamente:
+
+```text
+N(N - 1) / 2
+```
+
+combinaciones.
+
+Por ejemplo:
+
+```text
+N = 1000
+
+1000 * 999 / 2 = 499500 parejas
+```
+
+Por esta razón el benchmark de simulación completa utiliza cantidades menores de partículas que el benchmark exclusivo de movimiento.
+
+---
+
+# Validación
+
+El proyecto incluye un ejecutable específico:
+
+```bash
+./build/collision_validation
+```
+
+La validación comprueba:
+
+- colisión frontal entre dos partículas;
+- intercambio esperado de velocidades;
+- corrección del solapamiento;
+- rebote contra una pared;
+- versión secuencial;
+- versión paralela con 1 hilo;
+- versión paralela con 2 hilos;
+- versión paralela con 4 hilos;
+- versión paralela con 8 hilos.
+
+También se ejecuta un stress test con múltiples partículas y repeticiones.
+
+Una ejecución correcta produce:
+
+```text
+Validacion de colisiones
+
+Secuencial: OK
+
+Paralelo:
+  1 hilo:  OK
+  2 hilos: OK
+  4 hilos: OK
+  8 hilos: OK
+
+Colision contra pared: OK
+
+Stress test paralelo
+Particulas por prueba: 500
+Repeticiones: 20
+
+  1 hilo:  OK
+  2 hilos: OK
+  4 hilos: OK
+  8 hilos: OK
+
+Todas las validaciones fueron correctas.
+```
+
+---
+
+# Benchmark
+
+Para ejecutar las pruebas de rendimiento:
+
+```bash
+./build/screensaver_benchmark
+```
+
+El benchmark realiza **10 repeticiones por configuración** y genera:
+
+```text
+resultados_benchmark.csv
+```
+
+El archivo contiene:
+
+```text
+benchmark
+particles
+frames
+threads
+repetition
+sequential_ms
+parallel_ms
+speedup
+efficiency
+```
+
+---
+
+## Benchmark de movimiento
+
+Compara:
+
+```text
+updateSequential()
+        vs
+updateParallel()
+```
+
+Actualmente se prueban:
+
+```text
+1 000 partículas
+10 000 partículas
+100 000 partículas
+```
+
+con:
+
+```text
+1, 2, 4 y 8 hilos
+```
+
+y 200 frames por medición.
+
+---
+
+## Benchmark de simulación completa
+
+También se mide:
+
+```text
+SECUENCIAL
+
+updateSequential()
++
+resolveCollisionsSequential()
+```
+
+contra:
+
+```text
+PARALELO
+
+updateParallel()
++
+resolveCollisionsParallel()
+```
+
+Actualmente se prueban:
+
+```text
+250 partículas
+500 partículas
+1000 partículas
+```
+
+con 50 frames por medición y 10 repeticiones.
+
+---
+
+# Speedup y eficiencia
+
+El speedup indica cuántas veces más rápida es la implementación paralela respecto a la secuencial:
+
+```text
+Speedup = Tiempo secuencial / Tiempo paralelo
+```
+
+Un resultado:
+
+```text
+Speedup > 1
+```
+
+indica una mejora de rendimiento.
+
+La eficiencia se calcula como:
+
+```text
+Eficiencia = Speedup / Número de hilos
+```
+
+y permite analizar qué tan bien se aprovechan los recursos disponibles.
+
+---
+
+# Resultados preliminares
+
+Las mediciones dependen del hardware y de la carga del sistema, por lo que los resultados definitivos deben obtenerse en condiciones controladas.
+
+En las pruebas de desarrollo realizadas hasta ahora se observó speedup tanto en el movimiento como en la simulación completa.
+
+Por ejemplo, una ejecución de desarrollo de la simulación completa produjo:
+
+| Partículas | Hilos | Speedup |
+|---:|---:|---:|
+| 250 | 2 | 1.817x |
+| 250 | 4 | **2.528x** |
+| 250 | 8 | 2.250x |
+| 500 | 2 | 1.281x |
+| 500 | 4 | 1.489x |
+| 500 | 8 | **1.679x** |
+| 1000 | 2 | 1.322x |
+| 1000 | 4 | **1.840x** |
+| 1000 | 8 | 1.835x |
+
+Estos valores son preliminares y pueden variar entre ejecuciones.
+
+Un aspecto observado es que aumentar la cantidad de hilos no garantiza automáticamente un mejor resultado. Para cargas pequeñas, el costo de crear, coordinar y sincronizar trabajo paralelo puede superar el beneficio obtenido.
+
+---
+
+# Evolución de la versión paralela
+
+Durante el desarrollo se implementaron y evaluaron diferentes estrategias.
+
+La primera versión paralela de colisiones utilizaba una sección crítica para cada posible pareja de partículas.
+
+Aunque era una solución segura para el acceso compartido, las mediciones mostraron una fuerte pérdida de rendimiento.
+
+En una prueba con 1000 partículas y 8 hilos se obtuvo aproximadamente:
+
+```text
+Speedup: 0.049x
+```
+
+Esto indicó que la sincronización se había convertido en un cuello de botella.
+
+Después de modificar la estrategia para separar la detección de candidatos y la resolución de las colisiones, la misma clase de prueba alcanzó un speedup superior a:
+
+```text
+1.8x
+```
+
+La comparación muestra por qué la paralelización no consiste únicamente en agregar hilos: también es necesario analizar la granularidad del trabajo, la sincronización y el acceso a memoria compartida.
+
+---
+
+# Pruebas manuales
+
+Algunos comandos útiles para verificar el proyecto:
+
+### Secuencial
 
 ```bash
 ./build/screensaver --particles 500
-./build/screensaver --particles 2000 --width 1280 --height 720
-./build/screensaver --particles 100 --seed 7 --max-fps 120
 ```
 
-### Controles
+### Paralelo con 2 hilos
 
-* `ESC` o cerrar la ventana: termina el programa.
-* El título de la ventana muestra los FPS actuales.
+```bash
+./build/screensaver_parallel --particles 500 --threads 2
+```
 
-## Estado del proyecto
+### Paralelo con 4 hilos
 
-Versión secuencial funcionando: movimiento, rebotes contra los bordes,
-colisiones entre partículas y renderizado con framebuffer en SDL2.
-Pendiente: integración de la versión paralela con OpenMP y sus benchmarks.
+```bash
+./build/screensaver_parallel --particles 500 --threads 4
+```
 
-## Estructura principal
+### Paralelo con 8 hilos
 
-* `src/particles.cpp` — inicialización de partículas y configuración.
-* `src/movement.cpp` — movimiento, física y rebotes (secuencial/paralelo).
-* `src/collisions.cpp` — detección y resolución de colisiones (secuencial/paralelo).
-* `src/renderer.cpp` — ventana SDL y framebuffer de píxeles.
-* `src/main.cpp` — argumentos de línea de comandos y game loop.
-* `src/benchmark.cpp` — mediciones de speedup y eficiencia.
+```bash
+./build/screensaver_parallel --particles 500 --threads 8
+```
+
+### Validación
+
+```bash
+./build/collision_validation
+```
+
+### Benchmark
+
+```bash
+./build/screensaver_benchmark
+```
+
+---
+
+# Salir del screensaver
+
+Para cerrar cualquiera de las versiones:
+
+- cerrar la ventana; o
+- presionar `ESC`.
+
+---
+
+# Notas sobre rendimiento
+
+Los resultados pueden variar dependiendo de:
+
+- procesador;
+- número de núcleos e hilos disponibles;
+- sistema operativo;
+- compilador;
+- optimizaciones de compilación;
+- procesos ejecutándose en segundo plano;
+- cantidad de partículas;
+- cantidad de hilos OpenMP.
+
+Por esta razón las comparaciones de rendimiento deben realizarse en la misma computadora y bajo condiciones similares.
+
+Para resultados finales se recomienda utilizar una compilación optimizada.
+
+Por ejemplo:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+---
+
+# Objetivo del proyecto
+
+El objetivo principal es analizar el proceso de transformación de una solución secuencial a una solución paralela utilizando memoria compartida.
+
+El proyecto permite observar conceptos como:
+
+- descomposición del problema;
+- distribución de trabajo;
+- memoria compartida;
+- sincronización;
+- granularidad;
+- overhead;
+- speedup;
+- eficiencia;
+- escalabilidad.
+
+La comparación entre diferentes implementaciones permite observar que una versión paralela no necesariamente es más rápida por el simple hecho de utilizar más hilos.
+
+La optimización requiere medir, identificar cuellos de botella y modificar la estrategia de paralelización.
+
+---
+
+## Estado actual
+
+```text
+[OK] Screensaver secuencial
+[OK] Screensaver paralelo con OpenMP
+[OK] Movimiento paralelo
+[OK] Colisiones entre partículas
+[OK] Detección paralela de colisiones
+[OK] Configuración de número de hilos
+[OK] Validación de colisiones
+[OK] Stress tests
+[OK] Benchmark de movimiento
+[OK] Benchmark de simulación completa
+[OK] Cálculo de speedup
+[OK] Cálculo de eficiencia
+[OK] Exportación de resultados a CSV
+```
+
+El proyecto se encuentra actualmente en la etapa de **pruebas de rendimiento y documentación de resultados**.
