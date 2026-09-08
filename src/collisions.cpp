@@ -9,6 +9,25 @@
 
 namespace {
 
+// Aplica el esquema de distribución de OpenMP configurado en la simulación.
+void applySchedule(const SimulationConfig& config) {
+    switch (config.scheduleKind) {
+        case ScheduleKind::Dynamic:
+            omp_set_schedule(omp_sched_dynamic, 1);
+            break;
+
+        case ScheduleKind::Guided:
+            omp_set_schedule(omp_sched_guided, 1);
+            break;
+
+        case ScheduleKind::Static:
+        default:
+            // Bloque entero por hilo: comportamiento por defecto.
+            omp_set_schedule(omp_sched_static, 0);
+            break;
+    }
+}
+
 // Normaliza un vector evitando divisiones por cero.
 void normalizePair(
     const float dx,
@@ -249,6 +268,9 @@ void resolveCollisionsParallel(
             static_cast<std::size_t>(threadCount)
         );
 
+    // Prepara el esquema de distribución antes de crear el equipo de hilos.
+    applySchedule(config);
+
     // Cada hilo busca posibles colisiones
     // sin modificar las particulas.
 #pragma omp parallel num_threads(threadCount)
@@ -264,7 +286,7 @@ void resolveCollisionsParallel(
                     )
                 ];
 
-#pragma omp for schedule(static)
+#pragma omp for schedule(runtime)
         for (
             long long i = 0;
             i <

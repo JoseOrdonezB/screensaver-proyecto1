@@ -25,6 +25,18 @@ struct Particle {
     std::uint8_t alpha;
 };
 
+// Esquema de distribución de iteraciones de OpenMP.
+enum class ScheduleKind {
+    // Bloques contiguos predefinidos (comportamiento base).
+    Static,
+
+    // Asignación dinámica por trozos pequeños mientras hay trabajo.
+    Dynamic,
+
+    // Trozos decrecientes: balanceo con menos overhead que dynamic.
+    Guided
+};
+
 // Contiene los parámetros generales de la simulación.
 struct SimulationConfig {
     // Dimensiones del canvas.
@@ -58,6 +70,9 @@ struct SimulationConfig {
 
     // Cantidad de hilos para OpenMP.
     int threadCount = 1;
+
+    // Esquema de distribución usado por las rutinas paralelas.
+    ScheduleKind scheduleKind = ScheduleKind::Static;
 };
 
 // Crea e inicializa todas las partículas.

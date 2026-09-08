@@ -236,16 +236,19 @@ La simulación contiene dos partes principales que se analizaron para paraleliza
 
 El movimiento de las partículas es apropiado para paralelización porque cada iteración puede actualizar una partícula diferente.
 
-La versión paralela utiliza OpenMP con distribución estática del trabajo.
+La versión paralela utiliza OpenMP con un esquema de distribución configurable.
 
 Conceptualmente:
 
 ```cpp
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(runtime) \
+    num_threads(config.threadCount)
 for (...) {
     // actualizar particula
 }
 ```
+
+El esquema se define en tiempo de ejecución con `omp_set_schedule()`. Por defecto se usa `static` (distribución estática), pero el benchmark puede comparar las tres variantes disponibles.
 
 Esto permite distribuir las partículas entre varios hilos.
 
@@ -284,6 +287,8 @@ Thread 3 -> candidatos locales
 ```
 
 Esto evita que varios hilos modifiquen simultáneamente la misma estructura.
+
+Al igual que en el movimiento, el loop de detección usa `schedule(runtime)` con `omp_set_schedule()`, permitiendo comparar esquemas estáticos, dinámicos y guiados.
 
 ### 2. Resolución
 
@@ -394,12 +399,15 @@ benchmark
 particles
 frames
 threads
+schedule
 repetition
 sequential_ms
 parallel_ms
 speedup
 efficiency
 ```
+
+La columna `schedule` indica el esquema de distribución de OpenMP utilizado: `static`, `dynamic` o `guided`.
 
 ---
 
@@ -425,6 +433,12 @@ con:
 
 ```text
 1, 2, 4 y 8 hilos
+```
+
+y los esquemas de distribución:
+
+```text
+static, dynamic y guided
 ```
 
 y 200 frames por medición.
@@ -461,7 +475,34 @@ Actualmente se prueban:
 1000 partículas
 ```
 
-con 50 frames por medición y 10 repeticiones.
+con 50 frames por medición y 10 repeticiones, probando también los tres esquemas de distribución (`static`, `dynamic` y `guided`).
+
+---
+
+## Comparación de esquemas de distribución
+
+El proyecto compara los tres esquemas de distribución de OpenMP que ofrece `schedule(runtime)`:
+
+- `static`: bloques contiguos de iteraciones repartidos por adelantado.
+- `dynamic`: las iteraciones se asignan dinámicamente en trozos pequeños.
+- `guided`: trozos decrecientes, similar a dynamic pero con menos overhead.
+
+La elección del esquema depende del tipo de trabajo:
+
+- **Trabajo uniforme** (movimiento): todas las iteraciones tardan lo mismo. `static` es el adecuado porque no agrega overhead.
+- **Trabajo desbalanceado** (detección de colisiones): el loop interno depende de `i`, por lo que las primeras iteraciones hacen mucho más trabajo que las últimas. Aquí `dynamic` o `guided` pueden mejorar el balanceo.
+
+En el benchmark de simulación con 1000 partículas y 8 hilos, las mediciones de desarrollo mostraron:
+
+| Esquema | Speedup promedio |
+|---:|---:|
+| static | **1.449x** |
+| guided | 1.290x |
+| dynamic | 1.276x |
+
+También se puede ver el efecto contrario: en el benchmark de movimiento con uniformidad total y pocas partículas, el overhead de `dynamic` degrada el rendimiento respecto a `static`.
+
+Esto demuestra que la elección del esquema de distribución es otra decisión que debe basarse en mediciones y no en suposiciones.
 
 ---
 
@@ -651,6 +692,8 @@ La optimización requiere medir, identificar cuellos de botella y modificar la e
 [OK] Colisiones entre partículas
 [OK] Detección paralela de colisiones
 [OK] Configuración de número de hilos
+[OK] Esquemas de distribución configurables (static/dynamic/guided)
+[OK] Comparación de esquemas en el benchmark
 [OK] Validación de colisiones
 [OK] Stress tests
 [OK] Benchmark de movimiento

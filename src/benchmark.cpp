@@ -48,6 +48,30 @@ std::vector<int> createThreadList() {
     return threadCounts;
 }
 
+// Los esquemas de distribucion que se comparan en el benchmark.
+std::vector<ScheduleKind> createScheduleList() {
+    return {
+        ScheduleKind::Static,
+        ScheduleKind::Dynamic,
+        ScheduleKind::Guided
+    };
+}
+
+// Nombre legible de un esquema de distribucion para CSV y consola.
+std::string scheduleName(const ScheduleKind schedule) {
+    switch (schedule) {
+        case ScheduleKind::Dynamic:
+            return "dynamic";
+
+        case ScheduleKind::Guided:
+            return "guided";
+
+        case ScheduleKind::Static:
+        default:
+            return "static";
+    }
+}
+
 
 // Mide solamente el movimiento secuencial.
 double measureMovementSequential(
@@ -154,6 +178,7 @@ void writeMeasurement(
     const std::size_t particleCount,
     const int frames,
     const int threadCount,
+    const std::string& schedule,
     const int repetition,
     const double sequentialTime,
     const double parallelTime
@@ -169,6 +194,7 @@ void writeMeasurement(
         << particleCount << ','
         << frames << ','
         << threadCount << ','
+        << schedule << ','
         << repetition << ','
         << sequentialTime * 1000.0 << ','
         << parallelTime * 1000.0 << ','
@@ -181,6 +207,7 @@ void writeMeasurement(
 // con el speedup y la eficiencia calculados para una configuracion.
 void printAverage(
     const int threadCount,
+    const std::string& schedule,
     const double sequentialAverage,
     const double parallelAverage
 ) {
@@ -192,6 +219,7 @@ void printAverage(
 
     std::cout
         << "Hilos: " << threadCount
+        << " [" << schedule << ']'
         << " | Secuencial: "
         << sequentialAverage * 1000.0 << " ms"
         << " | Paralelo: "
@@ -257,48 +285,56 @@ void runMovementBenchmark(
         const double sequentialAverage =
             calculateAverage(sequentialTimes);
 
-        for (const int threadCount : threadCounts) {
-            config.threadCount = threadCount;
+        for (const ScheduleKind schedule : createScheduleList()) {
+            const std::string scheduleLabel =
+                scheduleName(schedule);
 
-            std::vector<double> parallelTimes;
-            parallelTimes.reserve(repetitions);
+            for (const int threadCount : threadCounts) {
+                config.threadCount = threadCount;
+                config.scheduleKind = schedule;
 
-            for (
-                int repetition = 0;
-                repetition < repetitions;
-                ++repetition
-            ) {
-                const double parallelTime =
-                    measureMovementParallel(
-                        initialParticles,
-                        config,
-                        frames
+                std::vector<double> parallelTimes;
+                parallelTimes.reserve(repetitions);
+
+                for (
+                    int repetition = 0;
+                    repetition < repetitions;
+                    ++repetition
+                ) {
+                    const double parallelTime =
+                        measureMovementParallel(
+                            initialParticles,
+                            config,
+                            frames
+                        );
+
+                    parallelTimes.push_back(parallelTime);
+
+                    writeMeasurement(
+                        outputFile,
+                        "movement",
+                        particleCount,
+                        frames,
+                        threadCount,
+                        scheduleLabel,
+                        repetition + 1,
+                        sequentialTimes[
+                            static_cast<std::size_t>(repetition)
+                        ],
+                        parallelTime
                     );
+                }
 
-                parallelTimes.push_back(parallelTime);
+                const double parallelAverage =
+                    calculateAverage(parallelTimes);
 
-                writeMeasurement(
-                    outputFile,
-                    "movement",
-                    particleCount,
-                    frames,
+                printAverage(
                     threadCount,
-                    repetition + 1,
-                    sequentialTimes[
-                        static_cast<std::size_t>(repetition)
-                    ],
-                    parallelTime
+                    scheduleLabel,
+                    sequentialAverage,
+                    parallelAverage
                 );
             }
-
-            const double parallelAverage =
-                calculateAverage(parallelTimes);
-
-            printAverage(
-                threadCount,
-                sequentialAverage,
-                parallelAverage
-            );
         }
 
         std::cout << '\n';
@@ -362,48 +398,56 @@ void runSimulationBenchmark(
         const double sequentialAverage =
             calculateAverage(sequentialTimes);
 
-        for (const int threadCount : threadCounts) {
-            config.threadCount = threadCount;
+        for (const ScheduleKind schedule : createScheduleList()) {
+            const std::string scheduleLabel =
+                scheduleName(schedule);
 
-            std::vector<double> parallelTimes;
-            parallelTimes.reserve(repetitions);
+            for (const int threadCount : threadCounts) {
+                config.threadCount = threadCount;
+                config.scheduleKind = schedule;
 
-            for (
-                int repetition = 0;
-                repetition < repetitions;
-                ++repetition
-            ) {
-                const double parallelTime =
-                    measureSimulationParallel(
-                        initialParticles,
-                        config,
-                        frames
+                std::vector<double> parallelTimes;
+                parallelTimes.reserve(repetitions);
+
+                for (
+                    int repetition = 0;
+                    repetition < repetitions;
+                    ++repetition
+                ) {
+                    const double parallelTime =
+                        measureSimulationParallel(
+                            initialParticles,
+                            config,
+                            frames
+                        );
+
+                    parallelTimes.push_back(parallelTime);
+
+                    writeMeasurement(
+                        outputFile,
+                        "simulation",
+                        particleCount,
+                        frames,
+                        threadCount,
+                        scheduleLabel,
+                        repetition + 1,
+                        sequentialTimes[
+                            static_cast<std::size_t>(repetition)
+                        ],
+                        parallelTime
                     );
+                }
 
-                parallelTimes.push_back(parallelTime);
+                const double parallelAverage =
+                    calculateAverage(parallelTimes);
 
-                writeMeasurement(
-                    outputFile,
-                    "simulation",
-                    particleCount,
-                    frames,
+                printAverage(
                     threadCount,
-                    repetition + 1,
-                    sequentialTimes[
-                        static_cast<std::size_t>(repetition)
-                    ],
-                    parallelTime
+                    scheduleLabel,
+                    sequentialAverage,
+                    parallelAverage
                 );
             }
-
-            const double parallelAverage =
-                calculateAverage(parallelTimes);
-
-            printAverage(
-                threadCount,
-                sequentialAverage,
-                parallelAverage
-            );
         }
 
         std::cout << '\n';
@@ -436,6 +480,7 @@ int main() {
         << "particles,"
         << "frames,"
         << "threads,"
+        << "schedule,"
         << "repetition,"
         << "sequential_ms,"
         << "parallel_ms,"
