@@ -5,6 +5,13 @@
 #include <iostream>
 
 namespace {
+
+// Tamaño del halo luminoso en función del radio de la partícula.
+constexpr float GLOW_MULTIPLIER = 1.8f;
+
+// Exponente del decaimiento del brillo: mayor valor, halo mas compacto.
+constexpr float GLOW_FALLOFF = 2.0f;
+
 // Empaqueta RGBA en un único entero de 32 bits.
 std::uint32_t packColor(
     const std::uint8_t red,
@@ -19,32 +26,80 @@ std::uint32_t packColor(
         static_cast<std::uint32_t>(blue);
 }
 
-// Rellena el círculo de una partícula dentro del framebuffer de píxeles.
+// Extrae el componente rojo de un pixel ARGB.
+std::uint8_t extractRed(const std::uint32_t pixel) {
+    return static_cast<std::uint8_t>((pixel >> 16) & 0xFF);
+}
+
+// Extrae el componente verde de un pixel ARGB.
+std::uint8_t extractGreen(const std::uint32_t pixel) {
+    return static_cast<std::uint8_t>((pixel >> 8) & 0xFF);
+}
+
+// Extrae el componente azul de un pixel ARGB.
+std::uint8_t extractBlue(const std::uint32_t pixel) {
+    return static_cast<std::uint8_t>(pixel & 0xFF);
+}
+
+// Mezcla un color con el fondo según un factor alpha entre 0.0 y 1.0.
+std::uint32_t blendWithBackground(
+    const std::uint32_t backgroundColor,
+    const std::uint8_t red,
+    const std::uint8_t green,
+    const std::uint8_t blue,
+    const float alpha
+) {
+    const float bgRed = extractRed(backgroundColor);
+    const float bgGreen = extractGreen(backgroundColor);
+    const float bgBlue = extractBlue(backgroundColor);
+
+    const float outRed = alpha * red + (1.0f - alpha) * bgRed;
+    const float outGreen = alpha * green + (1.0f - alpha) * bgGreen;
+    const float outBlue = alpha * blue + (1.0f - alpha) * bgBlue;
+
+    return packColor(
+        static_cast<std::uint8_t>(outRed),
+        static_cast<std::uint8_t>(outGreen),
+        static_cast<std::uint8_t>(outBlue),
+        255
+    );
+}
+
+// Rellena el círculo de una partícula y su halo luminoso.
 void fillParticleCircle(
     Renderer& renderer,
     const Particle& particle
 ) {
     const int centerX = static_cast<int>(particle.x);
     const int centerY = static_cast<int>(particle.y);
-    const int radius =
-        static_cast<int>(std::ceil(particle.radius));
 
-    const int minX = std::max(0, centerX - radius);
+    const float radius = particle.radius;
+    const float glowRadius = radius * GLOW_MULTIPLIER;
+
+    // El bounding box cubre tambien el halo externo.
+    const int glowRadiusPixels =
+        static_cast<int>(std::ceil(glowRadius));
+
+    const int minX = std::max(0, centerX - glowRadiusPixels);
     const int maxX =
-        std::min(renderer.width - 1, centerX + radius);
-    const int minY = std::max(0, centerY - radius);
+        std::min(renderer.width - 1, centerX + glowRadiusPixels);
+    const int minY = std::max(0, centerY - glowRadiusPixels);
     const int maxY =
-        std::min(renderer.height - 1, centerY + radius);
+        std::min(renderer.height - 1, centerY + glowRadiusPixels);
 
-    const float radiusSquared =
-        particle.radius * particle.radius;
+    const float radiusSquared = radius * radius;
+    const float glowRadiusSquared = glowRadius * glowRadius;
 
-    const std::uint32_t color = packColor(
+    // Color solido del nucleo de la particula.
+    const std::uint32_t coreColor = packColor(
         particle.red,
         particle.green,
         particle.blue,
         particle.alpha
     );
+
+    const float glowWidth =
+        std::max(glowRadius - radius, 1.0e-6f);
 
     for (int y = minY; y <= maxY; ++y) {
         const float dy = y - particle.y;
@@ -57,9 +112,27 @@ void fillParticleCircle(
 
         for (int x = minX; x <= maxX; ++x) {
             const float dx = x - particle.x;
+            const float distanceSquared = dx * dx + dySquared;
 
-            if (dx * dx + dySquared <= radiusSquared) {
-                renderer.pixels[index] = color;
+            // Nucleo solido.
+            if (distanceSquared <= radiusSquared) {
+                renderer.pixels[index] = coreColor;
+            }
+            // Halo luminoso con decaimiento hacia el fondo.
+            else if (distanceSquared <= glowRadiusSquared) {
+                const float distance = std::sqrt(distanceSquared);
+                const float normalized =
+                    (distance - radius) / glowWidth;
+                const float alpha =
+                    std::max(0.0f, 1.0f - std::pow(normalized, GLOW_FALLOFF));
+
+                renderer.pixels[index] = blendWithBackground(
+                    renderer.backgroundColor,
+                    particle.red,
+                    particle.green,
+                    particle.blue,
+                    alpha
+                );
             }
 
             ++index;
