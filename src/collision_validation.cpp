@@ -10,6 +10,8 @@
 
 namespace {
 
+// Compara dos valores de punto flotante con una tolerancia relativa
+// al mayor de ambos, evitando falsos negativos por error de precision.
 bool almostEqual(
     float a,
     float b,
@@ -31,6 +33,8 @@ bool almostEqual(
 // ESCENARIO SIMPLE
 // ============================================================
 
+// Crea dos particulas enfrentadas con velocidades opuestas e igual
+// masa para probar el intercambio de velocidades en una colision.
 std::vector<Particle> createCollisionScenario() {
     std::vector<Particle> particles(2);
 
@@ -52,6 +56,8 @@ std::vector<Particle> createCollisionScenario() {
 }
 
 
+// Verifica que tras la colision las particulas queden separadas por
+// la distancia esperada y hayan intercambiado sus velocidades.
 bool validateCollisionResult(
     const std::vector<Particle>& particles,
     const std::string& testName
@@ -104,6 +110,8 @@ bool validateCollisionResult(
 }
 
 
+// Ejecuta el escenario de colision con la resolucion secuencial
+// y comprueba que se obtenga el resultado esperado.
 bool validateSequentialCollision() {
     std::vector<Particle> particles =
         createCollisionScenario();
@@ -123,6 +131,8 @@ bool validateSequentialCollision() {
 }
 
 
+// Ejecuta el escenario de colision con la resolucion paralela usando
+// una cantidad dada de hilos y comprueba el resultado esperado.
 bool validateParallelCollision(
     const int threadCount
 ) {
@@ -152,6 +162,8 @@ bool validateParallelCollision(
 // COLISION CONTRA PARED
 // ============================================================
 
+// Avanza una particula contra el borde izquierdo del canvas y
+// verifica que su posicion se corrija y su velocidad se invierta.
 bool validateWallCollision() {
     Particle particle{};
 

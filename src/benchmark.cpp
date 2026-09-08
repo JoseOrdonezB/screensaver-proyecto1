@@ -14,6 +14,8 @@ namespace {
 // Evita que el compilador elimine los calculos del benchmark.
 volatile float benchmarkResult = 0.0f;
 
+// Calcula el promedio de una lista de tiempos medidos;
+// devuelve 0 si la lista esta vacia.
 double calculateAverage(const std::vector<double>& values) {
     if (values.empty()) {
         return 0.0;
@@ -28,6 +30,8 @@ double calculateAverage(const std::vector<double>& values) {
     return total / static_cast<double>(values.size());
 }
 
+// Genera la lista de cantidades de hilos a probar: potencias
+// de dos desde 1 hasta 8, sin superar el maximo disponible.
 std::vector<int> createThreadList() {
     const int maximumThreads = omp_get_max_threads();
 
@@ -173,7 +177,8 @@ void writeMeasurement(
 }
 
 
-// Muestra los promedios de una configuracion.
+// Muestra por consola el promedio secuencial y paralelo junto
+// con el speedup y la eficiencia calculados para una configuracion.
 void printAverage(
     const int threadCount,
     const double sequentialAverage,
